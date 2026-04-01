@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BM Report AI Checker | COSOJI</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #f0f4f8;
+  --white: #ffffff;
+  --primary: #1e40af;
+  --primary-light: #dbeafe;
+  --gold: #b45309;
+  --gold-light: #fef3c7;
+  --red: #dc2626; --red-light: #fee2e2;
+  --orange: #ea580c; --orange-light: #ffedd5;
+  --purple: #7c3aed; --purple-light: #ede9fe;
+  --green: #059669; --green-light: #d1fae5;
+  --text: #1e293b; --text2: #64748b;
+  --border: #e2e8f0;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+body { font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+header {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 64px;
+  box-shadow: var(--shadow);
+}
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-mark { width: 38px; height: 38px; border-radius: 10px; background: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; color: #fff; letter-spacing: -1px; }
+.logo-name { font-size: 15px; font-weight: 700; color: var(--text); }
+.logo-sub { font-size: 10px; color: var(--primary); letter-spacing: 0.1em; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.header-badge { font-size: 11px; padding: 4px 12px; border-radius: 20px; background: var(--primary-light); color: var(--primary); font-weight: 600; }
+
+.hero { background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%); padding: 36px 40px; color: #fff; }
+.hero h1 { font-size: 24px; font-weight: 800; line-height: 1.4; }
+.hero h1 span { color: #93c5fd; }
+.hero p { font-size: 13px; opacity: 0.85; margin-top: 6px; line-height: 1.7; }
+.hero-badges { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.hbadge { font-size: 11px; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+
+.main { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 24px 40px; max-width: 1200px; margin: 0 auto; }
+
+.card { background: var(--white); border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; }
+.card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background: #fafbfc; }
+.card-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.card-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: var(--primary-light); color: var(--primary); font-weight: 600; margin-left: auto; }
+
+.upload-area { margin: 16px 20px; border: 2px dashed var(--border); border-radius: 12px; padding: 20px; text-align: center; background: var(--bg); cursor: pointer; transition: all 0.2s; }
+.upload-area:hover { border-color: var(--primary); background: var(--primary-light); }
+.upload-label { font-size: 13px; color: var(--text2); }
+.upload-label strong { color: var(--primary); }
+
+.or-line { text-align: center; font-size: 11px; color: var(--text2); margin: 4px 20px 8px; }
+
+textarea { width: calc(100% - 40px); margin: 0 20px; display: block; min-height: 200px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); font-size: 12px; line-height: 1.8; font-family: monospace; resize: vertical; outline: none; }
+textarea:focus { border-color: var(--primary); }
+
+.btn-area { padding: 16px 20px; }
+.btn-analyze { width: 100%; padding: 13px; background: var(--primary); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.btn-analyze:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(30,64,175,0.3); }
+
+/* Summary */
+.summary-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; padding: 16px 20px 8px; }
+.sc { border-radius: 10px; padding: 12px 8px; text-align: center; border: 1px solid; }
+.sc.total { background: var(--primary-light); border-color: #bfdbfe; }
+.sc.high { background: var(--red-light); border-color: #fca5a5; }
+.sc.medium { background: var(--orange-light); border-color: #fdba74; }
+.sc.low { background: var(--purple-light); border-color: #c4b5fd; }
+.sc-num { font-size: 26px; font-weight: 800; }
+.sc.total .sc-num { color: var(--primary); }
+.sc.high .sc-num { color: var(--red); }
+.sc.medium .sc-num { color: var(--orange); }
+.sc.low .sc-num { color: var(--purple); }
+.sc-label { font-size: 10px; color: var(--text2); margin-top: 2px; }
+
+/* Filter */
+.filter-row { display: flex; gap: 6px; padding: 8px 20px 12px; flex-wrap: wrap; }
+.ftab { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--white); color: var(--text2); font-size: 11px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.ftab.fa { border-color: var(--primary); color: var(--primary); background: var(--primary-light); font-weight: 700; }
+.ftab.fn { border-color: var(--red); color: var(--red); background: var(--red-light); font-weight: 700; }
+.ftab.fm { border-color: var(--orange); color: var(--orange); background: var(--orange-light); font-weight: 700; }
+.ftab.ff { border-color: var(--purple); color: var(--purple); background: var(--purple-light); font-weight: 700; }
+
+/* Defect cards */
+.defect-list { display: flex; flex-direction: column; gap: 8px; padding: 0 20px; max-height: 400px; overflow-y: auto; }
+.defect-list::-webkit-scrollbar { width: 4px; }
+.defect-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.dc { border-radius: 10px; padding: 12px 14px; cursor: pointer; border: 1px solid; transition: all 0.15s; }
+.dc.numeric { background: #fff7f7; border-color: #fca5a5; }
+.dc.missing { background: #fff8f3; border-color: #fdba74; }
+.dc.format { background: #faf7ff; border-color: #c4b5fd; }
+.dc:hover { transform: translateX(2px); box-shadow: var(--shadow); }
+.dc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.tbadge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.tn { background: var(--red-light); color: var(--red); }
+.tm { background: var(--orange-light); color: var(--orange); }
+.tf { background: var(--purple-light); color: var(--purple); }
+.sbadge { font-size: 10px; font-weight: 700; margin-left: auto; }
+.sh { color: var(--red); } .sm { color: var(--orange); } .sl { color: var(--text2); }
+.dc-id { font-size: 10px; color: var(--text2); }
+.dc-desc { font-size: 12px; color: var(--text); line-height: 1.6; margin-bottom: 4px; }
+.dc-loc { font-size: 11px; color: var(--text2); font-family: monospace; background: rgba(0,0,0,0.04); border-radius: 4px; padding: 3px 7px; display: inline-block; }
+.dc-sug { margin-top: 8px; padding: 8px 10px; background: var(--green-light); border-radius: 6px; font-size: 11px; color: var(--green); line-height: 1.6; display: none; }
+
+.btn-dl { margin: 16px 20px; width: calc(100% - 40px); padding: 11px; background: var(--white); border: 2px solid var(--primary); border-radius: 10px; color: var(--primary); font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; display: block; }
+.btn-dl:hover { background: var(--primary-light); }
+
+/* Highlight */
+.hl-section { background: var(--white); border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow); margin: 0 40px 24px; }
+.hl-box { padding: 16px 20px; font-size: 12px; line-height: 2.2; font-family: monospace; white-space: pre-wrap; color: var(--text); max-height: 260px; overflow-y: auto; }
+.hl-numeric { background: #fee2e2; border-bottom: 2px solid var(--red); color: var(--red); border-radius: 2px; padding: 0 2px; cursor: help; }
+.hl-missing { background: #ffedd5; border-bottom: 2px solid var(--orange); color: var(--orange); border-radius: 2px; padding: 0 2px; cursor: help; }
+.hl-format { background: #ede9fe; border-bottom: 2px solid var(--purple); color: var(--purple); border-radius: 2px; padding: 0 2px; cursor: help; }
+.legend { display: flex; gap: 16px; padding: 8px 20px 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.li { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
+.ld { width: 12px; height: 12px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">CS</div>
+    <div>
+      <div class="logo-name">COSOJI株式会社</div>
+      <div class="logo-sub">Building Management AI</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-badge">DEMO ver.</div>
+  </div>
+</header>
+
+<div class="hero">
+  <h1>BMレポート <span>不具合・品質検知AI</span></h1>
+  <p>建物管理レポートをAIが自動解析。数値異常・記載漏れ・フォーマット崩れを即時検出します。</p>
+  <div class="hero-badges">
+    <span class="hbadge">数値異常検知</span>
+    <span class="hbadge">記載漏れ検知</span>
+    <span class="hbadge">フォーマット崩れ検知</span>
+    <span class="hbadge">Powered by Claude AI</span>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Left -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">レポート入力</span>
+      <span class="card-badge">PDF対応</span>
+    </div>
+    <div class="upload-area" onclick="document.getElementById('fi').click()">
+      <div style="font-size:24px;margin-bottom:6px">📄</div>
+      <div class="upload-label" id="upload-label"><strong>PDFをクリックまたはドロップ</strong><br>テキスト型PDFに対応</div>
+      <input type="file" id="fi" accept=".pdf" style="display:none">
+    </div>
+    <div class="or-line">または直接テキストを貼り付け</div>
+    <textarea id="report-text">【月次建物管理レポート】
+報告期間：2024年11月〜2024/12/31
+施設名：グランドタワー大阪
+
+■ 設備点検結果
+空調設備：正常稼働
+電気設備：正常
+給排水設備：
+
+■ エネルギー消費量
+電力使用量：12,450 kWh
+ガス使用量：850 m3
+水道使用量：TBD
+
+■ 修繕履歴
+11月5日 屋上防水補修 費用：850,0000円
+11月20日 エレベーター定期点検 費用：120,000円
+12月3日 外壁タイル補修 担当：
+
+■ テナント対応
+苦情件数：-3件
+対応完了率：103%
+グランドタワー大阪ビル管理組合への報告：未提出
+
+■ 次月予定
+グランドタワー大阪ビル内装改修（予算：未定）
+消防設備点検（日程：　　）</textarea>
+    <div class="btn-area">
+      <button class="btn-analyze">AI で不具合を検知する</button>
+    </div>
+  </div>
+
+  <!-- Right -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">検知結果</span>
+      <span class="card-badge" style="background:#d1fae5;color:#059669">8件検知</span>
+    </div>
+    <div class="summary-grid">
+      <div class="sc total"><div class="sc-num">8</div><div class="sc-label">合計</div></div>
+      <div class="sc high"><div class="sc-num">3</div><div class="sc-label">重大</div></div>
+      <div class="sc medium"><div class="sc-num">3</div><div class="sc-label">中程度</div></div>
+      <div class="sc low"><div class="sc-num">2</div><div class="sc-label">軽微</div></div>
+    </div>
+    <div class="filter-row">
+      <button class="ftab fa" onclick="filter('all',this)">すべて (8)</button>
+      <button class="ftab" onclick="filter('numeric',this)">数値異常 (3)</button>
+      <button class="ftab" onclick="filter('missing',this)">記載漏れ (3)</button>
+      <button class="ftab" onclick="filter('format',this)">フォーマット崩れ (2)</button>
+    </div>
+    <div class="defect-list" id="defect-list"></div>
+    <button class="btn-dl">📥 検知レポートをダウンロード</button>
+  </div>
+</div>
+
+<!-- Highlight -->
+<div class="hl-section" style="margin:0 40px 24px">
+  <div class="card-header" style="background:#fafbfc;border-radius:16px 16px 0 0">
+    <span class="card-title">不具合ハイライト表示</span>
+    <span class="card-badge">マウスオーバーで詳細確認</span>
+  </div>
+  <div class="hl-box" id="hl-box"></div>
+  <div class="legend">
+    <div class="li"><div class="ld" style="background:#fee2e2;border:1px solid #dc2626"></div>数値異常</div>
+    <div class="li"><div class="ld" style="background:#ffedd5;border:1px solid #ea580c"></div>記載漏れ</div>
+    <div class="li"><div class="ld" style="background:#ede9fe;border:1px solid #7c3aed"></div>フォーマット崩れ</div>
+  </div>
+</div>
+
+<script>
+var DEFECTS = [
+  { id:'D001', type:'numeric', severity:'high', location:'850,0000円', description:'修繕費用の桁数が異常です。850万円なら「8,500,000円」が正しい表記です。', suggestion:'850,0000円 → 8,500,000円 に修正してください。' },
+  { id:'D002', type:'numeric', severity:'high', location:'対応完了率：103%', description:'対応完了率が100%を超えており、論理的に不整合です。', suggestion:'実績値を確認し、100%以内の正しい数値に修正してください。' },
+  { id:'D003', type:'numeric', severity:'high', location:'苦情件数：-3件', description:'苦情件数が負の値になっています。件数に負値は存在しません。', suggestion:'実際の苦情件数を確認し、正の整数に修正してください。' },
+  { id:'D004', type:'missing', severity:'medium', location:'給排水設備：', description:'給排水設備の点検結果が空欄です。記載が必要な必須項目です。', suggestion:'「正常」「要注意」「要修繕」など点検結果を記載してください。' },
+  { id:'D005', type:'missing', severity:'medium', location:'水道使用量：TBD', description:'水道使用量が未記載（TBD）のままです。', suggestion:'実測値を確認し、数値と単位（m3）を記載してください。' },
+  { id:'D006', type:'missing', severity:'medium', location:'外壁タイル補修　担当：', description:'12月3日の修繕担当者名が空欄です。', suggestion:'担当者名または担当部署を記載してください。' },
+  { id:'D007', type:'format', severity:'low', location:'2024年11月〜2024/12/31', description:'報告期間の日付表記が不統一です。「2024年11月」と「2024/12/31」で形式が混在しています。', suggestion:'「2024年11月1日〜2024年12月31日」に統一してください。' },
+  { id:'D008', type:'format', severity:'low', location:'消防設備点検（日程：　　）', description:'次月予定の日程が全角スペースのみで未入力です。', suggestion:'具体的な実施予定日を記載してください。' }
+];
+
+var currentFilter = 'all';
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function filter(type, btn) {
+  currentFilter = type;
+  var tabs = document.querySelectorAll('.ftab');
+  for (var i = 0; i < tabs.length; i++) tabs[i].className = 'ftab';
+  var cls = { all:'fa', numeric:'fn', missing:'fm', format:'ff' };
+  btn.className = 'ftab ' + (cls[type] || 'fa');
+  renderDefects();
+}
+
+function renderDefects() {
+  var list = document.getElementById('defect-list');
+  var filtered = [];
+  for (var i = 0; i < DEFECTS.length; i++) {
+    if (currentFilter === 'all' || DEFECTS[i].type === currentFilter) filtered.push(DEFECTS[i]);
+  }
+  var typeLabel = { numeric:'数値異常', missing:'記載漏れ', format:'フォーマット崩れ' };
+  var sevLabel = { high:'重大', medium:'中程度', low:'軽微' };
+  var html = '';
+  for (var j = 0; j < filtered.length; j++) {
+    var d = filtered[j];
+    var tc = { numeric:'tn', missing:'tm', format:'tf' }[d.type] || 'tf';
+    var sc = { high:'sh', medium:'sm', low:'sl' }[d.severity] || 'sl';
+    html += '<div class="dc ' + d.type + '" onclick="toggleCard(this)">'
+      + '<div class="dc-header">'
+      + '<span class="tbadge ' + tc + '">' + (typeLabel[d.type] || d.type) + '</span>'
+      + '<span class="sbadge ' + sc + '">' + (sevLabel[d.severity] || '') + '</span>'
+      + '<span class="dc-id">' + d.id + '</span>'
+      + '</div>'
+      + '<div class="dc-desc">' + esc(d.description) + '</div>'
+      + '<span class="dc-loc">' + esc(d.location) + '</span>'
+      + '<div class="dc-sug">修正提案：' + esc(d.suggestion) + '</div>'
+      + '</div>';
+  }
+  list.innerHTML = html;
+}
+
+function toggleCard(el) {
+  var sug = el.querySelector('.dc-sug');
+  sug.style.display = sug.style.display === 'none' ? 'block' : 'none';
+}
+
+function renderHighlight() {
+  var text = document.getElementById('report-text').value;
+  var marks = [];
+  for (var i = 0; i < DEFECTS.length; i++) {
+    var loc = DEFECTS[i].location.trim();
+    var idx = text.indexOf(loc);
+    if (idx !== -1) marks.push({ start: idx, end: idx + loc.length, type: DEFECTS[i].type, desc: DEFECTS[i].description });
+  }
+  marks.sort(function(a, b) { return a.start - b.start; });
+  var html = '';
+  var cur = 0;
+  for (var j = 0; j < marks.length; j++) {
+    var m = marks[j];
+    if (m.start < cur) continue;
+    if (m.start > cur) html += esc(text.slice(cur, m.start));
+    html += '<span class="hl-' + m.type + '" title="' + esc(m.desc) + '">' + esc(text.slice(m.start, m.end)) + '</span>';
+    cur = m.end;
+  }
+  if (cur < text.length) html += esc(text.slice(cur));
+  document.getElementById('hl-box').innerHTML = html;
+}
+
+renderDefects();
+renderHighlight();
+</script>
+</body>
+</html>
