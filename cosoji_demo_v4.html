@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>回答サジェスト — COSOJI デモ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --coral:#FF6B6B;--teal:#4ECDC4;--teal-d:#329e96;--coral-d:#d94f4f;
+  --bg:#EFEEE9;--sur:#FFFFFF;--sur2:#F5F4F0;--sur3:#EEEDE8;
+  --bd:rgba(0,0,0,0.09);--bd2:rgba(0,0,0,0.15);
+  --tx:#1A1A1A;--tx2:#5A5A5A;--tx3:#999;
+  --green:#27AE60;--amber:#D4820A;--red:#C0392B;
+  --r:10px;--r-sm:7px;--sh:0 2px 10px rgba(0,0,0,0.07);--sh-lg:0 8px 28px rgba(0,0,0,0.13);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);font-family:'Noto Sans JP',sans-serif;color:var(--tx);font-size:14px;overflow:hidden;}
+
+/* ── APP SHELL ── */
+.app{display:grid;grid-template-rows:52px 1fr;height:100vh;}
+
+/* TOPBAR */
+.topbar{background:var(--tx);display:flex;align-items:center;padding:0 20px;gap:14px;}
+.tlogo{font-size:17px;font-weight:700;color:#fff;letter-spacing:-0.5px;}
+.tlogo em{color:var(--teal);font-style:normal;}
+.tsep{width:1px;height:20px;background:rgba(255,255,255,0.2);}
+.ttitle{font-size:12px;color:rgba(255,255,255,0.6);}
+.tbadge{margin-left:auto;font-size:11px;font-weight:600;padding:4px 12px;border-radius:99px;background:var(--teal);color:#fff;letter-spacing:0.02em;}
+.esc-nav-btn{margin-left:auto;font-size:12px;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:99px;border:1.5px solid rgba(255,255,255,0.25);background:transparent;color:rgba(255,255,255,0.8);cursor:pointer;transition:all .15s;position:relative;}
+.esc-nav-btn:hover{border-color:var(--amber);color:#FFD080;}
+.esc-count-badge{min-width:18px;height:18px;border-radius:99px;background:var(--coral);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;}
+.tstep{font-size:11px;color:rgba(255,255,255,0.45);display:flex;align-items:center;gap:6px;}
+.tstep-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.25);}
+.tstep-dot.active{background:var(--teal);}
+
+/* ── 3-COLUMN MAIN ── */
+.main{display:grid;grid-template-columns:300px 1fr 340px;overflow:hidden;}
+
+/* ══ COL A: 物件選択 ══ */
+.col-a{background:var(--sur);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;}
+.col-header{padding:14px 16px 10px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.col-title{font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:0.1em;text-transform:uppercase;}
+.col-a-body{flex:1;overflow-y:auto;padding:14px 14px;}
+
+/* 検索 */
+.search-wrap{position:relative;margin-bottom:8px;}
+.prop-input{width:100%;height:40px;font-size:13px;font-family:inherit;border:1.5px solid var(--bd2);border-radius:var(--r-sm);padding:0 40px 0 12px;background:var(--sur2);color:var(--tx);outline:none;transition:border-color .15s;}
+.prop-input:focus{border-color:var(--teal);background:#fff;}
+.mic-inline{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:24px;height:24px;border:none;background:transparent;cursor:pointer;color:var(--tx3);display:flex;align-items:center;justify-content:center;transition:color .15s;}
+.mic-inline:hover{color:var(--teal);}
+.mic-inline.listening{color:var(--coral);animation:blink .8s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.voice-hint{font-size:10px;color:var(--coral);min-height:14px;margin-bottom:6px;}
+
+/* ドロップダウン */
+.dropdown{border:1px solid var(--bd2);border-radius:var(--r-sm);background:var(--sur);overflow:hidden;display:none;box-shadow:var(--sh-lg);margin-bottom:10px;}
+.dropdown.open{display:block;}
+.d-item{font-size:12px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;transition:background .1s;}
+.d-item:last-child{border-bottom:none;}
+.d-item:hover{background:#f0fdfb;}
+.d-item.sel{background:#e8faf8;border-left:2px solid var(--teal);}
+.type-pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;flex-shrink:0;}
+.tp-s{background:#E8F8F5;color:#1a7a6e;}
+.tp-f{background:#EBF5FB;color:#1a5276;}
+.tp-t{background:#F5EEF8;color:#6c3483;}
+.tp-p{background:#FEF9E7;color:#7d6608;}
+.d-right{margin-left:auto;font-size:11px;color:var(--tx3);white-space:nowrap;}
+
+/* 物件サマリーカード */
+.prop-summary{background:linear-gradient(135deg,#1A1A1A 0%,#2d2d2d 100%);border-radius:var(--r);padding:14px;margin-bottom:12px;display:none;color:#fff;}
+.prop-summary.visible{display:block;}
+.ps-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.ps-name{font-size:14px;font-weight:700;}
+.ps-room{font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;}
+.change-btn{font-size:10px;border:1px solid rgba(255,255,255,0.25);border-radius:5px;padding:3px 8px;background:transparent;color:rgba(255,255,255,0.6);cursor:pointer;}
+.change-btn:hover{border-color:var(--teal);color:var(--teal);}
+.ps-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.ps-tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;}
+.tag-ok{background:rgba(78,205,196,0.25);color:#7efff8;}
+.tag-ng{background:rgba(255,107,107,0.25);color:#ffb3b3;}
+.tag-info{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.75);}
+.ps-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.ps-cell{font-size:11px;}
+.ps-k{color:rgba(255,255,255,0.45);margin-bottom:1px;}
+.ps-v{color:#fff;font-weight:500;}
+
+/* クイック質問 */
+.sec-label{font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;}
+.qlist{display:flex;flex-direction:column;gap:5px;}
+.qbtn{font-size:12px;font-family:inherit;text-align:left;padding:9px 12px;border:1px solid var(--bd);border-radius:var(--r-sm);background:var(--sur);color:var(--tx);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .12s;}
+.qbtn:hover{background:var(--sur2);border-color:var(--teal);color:var(--teal-d);}
+.qbtn-icon{font-size:13px;width:18px;text-align:center;flex-shrink:0;}
+.no-hint{font-size:12px;color:var(--tx3);text-align:center;padding:30px 0;}
+
+/* ══ COL B: チャット ══ */
+.col-b{display:grid;grid-template-rows:1fr auto;overflow:hidden;background:var(--bg);}
+.chat-area{overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;}
+.msg-user-row{display:flex;flex-direction:row-reverse;gap:8px;align-items:flex-start;}
+.msg-ai-row{display:flex;gap:8px;align-items:flex-start;}
+.av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.av-u{background:#DDD;color:#555;}
+.av-a{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;}
+.bubble{font-size:13px;line-height:1.7;padding:10px 14px;border-radius:var(--r);max-width:82%;}
+.bubble-u{background:var(--sur);border:1px solid var(--bd);color:var(--tx2);}
+.bubble-sys{background:#f0fdfb;border:1px dashed var(--teal);color:var(--teal-d);font-size:12px;}
+.typing-row{display:flex;gap:8px;align-items:center;}
+.typing-bub{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:12px 16px;display:flex;gap:4px;}
+.td{width:5px;height:5px;border-radius:50%;background:var(--teal);animation:td 1.2s infinite;}
+.td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+@keyframes td{0%,80%,100%{transform:scale(.65);opacity:.45}40%{transform:scale(1);opacity:1}}
+
+/* 回答カード（チャット埋め込み） */
+.answer-card{background:var(--sur);border:1px solid var(--bd2);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);max-width:92%;}
+.ac-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--bd);background:var(--sur2);}
+.ac-hl{font-size:12px;font-weight:700;color:var(--teal-d);display:flex;align-items:center;gap:5px;}
+.conf-chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;}
+.cc-hi{background:#E8F8F5;color:#1a7a6e;}
+.cc-mi{background:#FEF9E7;color:#7d6608;}
+.cc-lo{background:#FDEDEC;color:#922b21;}
+.ac-body{padding:12px 14px;}
+.ac-ans{font-size:14px;line-height:1.75;color:var(--tx);margin-bottom:12px;font-weight:500;}
+.ac-actions{display:flex;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);}
+.btn-use{font-size:12px;font-weight:700;font-family:inherit;background:var(--teal);color:#fff;border:none;border-radius:var(--r-sm);padding:7px 16px;cursor:pointer;transition:background .15s;}
+.btn-use:hover{background:var(--teal-d);}
+.btn-use:disabled{background:#aaa;}
+.btn-esc{font-size:12px;font-family:inherit;background:transparent;border:1px solid var(--bd2);border-radius:var(--r-sm);padding:7px 14px;cursor:pointer;color:var(--tx2);transition:all .15s;}
+.btn-esc:hover{border-color:var(--amber);color:var(--amber);}
+.btn-esc:disabled{opacity:.5;}
+.esc-box{background:#FEF3E2;border:1px solid #F0B429;border-radius:var(--r-sm);padding:8px 12px;font-size:12px;color:#7d5100;margin-top:8px;display:flex;gap:6px;}
+
+/* 入力バー */
+.input-bar{background:var(--sur);border-top:1px solid var(--bd);padding:12px 16px;display:flex;gap:8px;}
+.main-input{flex:1;height:44px;font-size:13px;font-family:inherit;border:1.5px solid var(--bd2);border-radius:var(--r);padding:0 12px;background:var(--sur2);color:var(--tx);outline:none;transition:border-color .15s;}
+.main-input:focus{border-color:var(--teal);background:#fff;}
+.main-input:disabled{opacity:.45;}
+.mic-q{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--bd2);background:var(--sur);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--tx2);transition:all .15s;flex-shrink:0;}
+.mic-q:hover{border-color:var(--teal);color:var(--teal);}
+.mic-q.listening{border-color:var(--coral);color:var(--coral);animation:ring .9s infinite;}
+@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,.3)}50%{box-shadow:0 0 0 7px rgba(255,107,107,0)}}
+.send-btn{height:44px;font-size:13px;font-weight:700;font-family:inherit;background:var(--teal);color:#fff;border:none;border-radius:var(--r);padding:0 20px;cursor:pointer;white-space:nowrap;transition:background .15s;}
+.send-btn:hover{background:var(--teal-d);}
+.send-btn:disabled{background:#ccc;cursor:default;}
+
+/* ══ COL C: 図面・根拠パネル ══ */
+.col-c{background:var(--sur);border-left:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;}
+.col-c-body{flex:1;overflow-y:auto;padding:14px;}
+
+/* タブ */
+.tabs{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0;}
+.tab{flex:1;font-size:12px;font-weight:600;font-family:inherit;padding:12px 0;border:none;background:transparent;cursor:pointer;color:var(--tx3);border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px;}
+.tab.active{color:var(--teal-d);border-bottom-color:var(--teal);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* 図面パネル */
+.fp-wrap{background:var(--sur2);border-radius:var(--r);padding:14px;margin-bottom:12px;}
+.fp-name{font-size:14px;font-weight:700;margin-bottom:2px;}
+.fp-sub{font-size:11px;color:var(--tx2);margin-bottom:12px;}
+.fp-svg-center{display:flex;justify-content:center;margin-bottom:12px;}
+.fp-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.fp-cell{background:var(--sur);border-radius:var(--r-sm);padding:8px 10px;}
+.fp-ck{font-size:10px;color:var(--tx3);margin-bottom:2px;}
+.fp-cv{font-size:12px;font-weight:600;}
+.fp-actions{display:flex;gap:8px;margin-top:10px;}
+.fp-btn{flex:1;font-size:12px;font-weight:600;font-family:inherit;padding:9px 0;border-radius:var(--r-sm);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.fp-btn-pri{background:var(--teal);color:#fff;border:none;}
+.fp-btn-pri:hover{background:var(--teal-d);}
+.fp-btn-sec{background:transparent;border:1.5px solid var(--bd2);color:var(--tx2);}
+.fp-btn-sec:hover{border-color:var(--teal);color:var(--teal-d);}
+.no-fp{font-size:12px;color:var(--tx3);text-align:center;padding:40px 0;}
+
+/* 根拠パネル */
+.ev-empty{font-size:12px;color:var(--tx3);text-align:center;padding:30px 0;}
+.ev-item{border:1px solid var(--bd2);border-radius:var(--r-sm);overflow:hidden;margin-bottom:8px;}
+.ev-head{display:flex;align-items:center;gap:7px;padding:7px 11px;background:var(--sur2);}
+.src-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;}
+.sb-gw{background:#EBF5FB;color:#1a5276;}
+.sb-sh{background:#FEF9E7;color:#7d6608;}
+.sb-kn{background:#F5EEF8;color:#6c3483;}
+.ev-field{font-size:11px;color:var(--tx2);}
+.ev-body{padding:8px 11px;font-size:12px;line-height:1.65;color:var(--tx);}
+.ev-body mark{background:#FFF59D;border-radius:2px;padding:0 2px;color:#4a3500;font-weight:600;}
+
+/* ══ エスカレタスクページ ══ */
+.esc-page{position:fixed;inset:0;background:var(--bg);z-index:200;display:none;flex-direction:column;overflow:hidden;}
+.esc-page.open{display:flex;}
+.esc-page-header{background:var(--tx);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.esc-back-btn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;font-family:inherit;color:rgba(255,255,255,.75);background:transparent;border:none;cursor:pointer;padding:6px 10px;border-radius:var(--r-sm);transition:color .15s;}
+.esc-back-btn:hover{color:#fff;}
+.esc-filter-tabs{display:flex;gap:4px;background:rgba(255,255,255,.1);border-radius:99px;padding:3px;}
+.ef-tab{font-size:12px;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:5px;padding:5px 14px;border-radius:99px;border:none;background:transparent;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;}
+.ef-tab.active{background:#fff;color:var(--tx);}
+.ef-count{font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:99px;background:rgba(255,255,255,.2);color:rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;padding:0 4px;}
+.ef-tab.active .ef-count{background:var(--bg);color:var(--tx2);}
+.esc-page-body{flex:1;overflow-y:auto;padding:24px;max-width:900px;margin:0 auto;width:100%;}
+.esc-empty{text-align:center;padding:80px 0;}
+.esc-task-list{display:flex;flex-direction:column;gap:10px;}
+.esc-task{background:var(--sur);border:1px solid var(--bd2);border-radius:var(--r);overflow:hidden;transition:box-shadow .15s;}
+.esc-task:hover{box-shadow:var(--sh);}
+.esc-task.done{opacity:.65;}
+.esc-task-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--bd);}
+.esc-status-btn{width:22px;height:22px;border-radius:50%;border:2px solid var(--bd2);background:transparent;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.esc-status-btn:hover{border-color:var(--teal);}
+.esc-status-btn.done{background:var(--teal);border-color:var(--teal);}
+.esc-task-prop{font-size:12px;font-weight:700;color:var(--tx);}
+.esc-task-room{font-size:11px;color:var(--tx3);margin-left:4px;}
+.esc-task-time{margin-left:auto;font-size:11px;color:var(--tx3);}
+.esc-done-label{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:#E8F8F5;color:#1a7a6e;margin-left:8px;display:none;}
+.esc-task.done .esc-done-label{display:inline-flex;}
+.esc-task-body{padding:12px 16px;}
+.esc-task-q{font-size:14px;font-weight:600;color:var(--tx);margin-bottom:6px;}
+.esc-task-ans{font-size:12px;color:var(--tx2);line-height:1.6;padding:8px 12px;background:var(--sur2);border-radius:var(--r-sm);border-left:3px solid var(--amber);margin-bottom:10px;}
+.esc-task-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.esc-conf{font-size:11px;padding:2px 8px;border-radius:99px;}
+.esc-task-actions{display:flex;gap:6px;margin-left:auto;}
+.esc-act{font-size:11px;font-family:inherit;padding:5px 12px;border-radius:var(--r-sm);cursor:pointer;border:1px solid var(--bd2);background:var(--sur);color:var(--tx2);transition:all .15s;}
+.esc-act:hover{border-color:var(--teal);color:var(--teal-d);}
+.esc-act.danger{border-color:transparent;color:var(--tx3);}
+.esc-act.danger:hover{border-color:var(--red);color:var(--red);}
+.esc-done-mark{font-size:11px;color:var(--teal-d);font-weight:600;display:none;}
+.esc-task.done .esc-done-mark{display:inline;}
+.esc-memo-area{margin-top:8px;display:none;}
+.esc-memo-area.open{display:block;}
+.esc-memo{width:100%;font-size:12px;font-family:inherit;border:1px solid var(--bd2);border-radius:var(--r-sm);padding:8px 10px;background:var(--sur2);color:var(--tx);resize:none;height:60px;outline:none;}
+.esc-memo:focus{border-color:var(--teal);}
+
+/* スクロールバー */
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px;}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tlogo">C<em>O</em>SOJI</div>
+  <div class="tsep"></div>
+  <div class="ttitle">AIサポートデスク — 回答サジェスト</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-left:24px;" class="tstep">
+    <div class="tstep-dot active" id="step1-dot"></div><span id="step1-lbl" style="color:rgba(255,255,255,.7)">①物件選択</span>
+    <span style="opacity:.3">›</span>
+    <div class="tstep-dot" id="step2-dot"></div><span id="step2-lbl">②質問入力</span>
+    <span style="opacity:.3">›</span>
+    <div class="tstep-dot" id="step3-dot"></div><span id="step3-lbl">③根拠確認</span>
+  </div>
+  <button class="esc-nav-btn" onclick="openEscPage()">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1v8M5 6l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="11" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+    エスカレタスク
+    <span class="esc-count-badge" id="esc-count-badge" style="display:none">0</span>
+  </button>
+  <div class="tbadge">PoC デモ</div>
+</div>
+
+<div class="main">
+
+<!-- ══ COL A ══ -->
+<div class="col-a">
+  <div class="col-header">
+    <span class="col-title">物件を選ぶ</span>
+    <span style="font-size:10px;color:var(--tx3)" id="prop-count">4件</span>
+  </div>
+  <div class="col-a-body">
+    <div class="search-wrap">
+      <input class="prop-input" id="prop-input" placeholder="物件名・部屋番号で検索…" oninput="filterProps(this.value)" onfocus="openDrop()" autocomplete="off"/>
+      <button class="mic-inline" id="mic-prop" onclick="startVoice('prop')" title="音声入力">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="6.5" y="1" width="7" height="10" rx="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 10c0 3.6 2.9 6.5 6.5 6.5s6.5-2.9 6.5-6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="10" y1="16.5" x2="10" y2="19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="voice-hint" id="vhint-prop"></div>
+    <div class="dropdown" id="prop-drop"></div>
+
+    <!-- 物件サマリー -->
+    <div class="prop-summary" id="prop-summary">
+      <div class="ps-top">
+        <div><div class="ps-name" id="ps-name"></div><div class="ps-room" id="ps-room"></div></div>
+        <button class="change-btn" onclick="clearProp()">変更</button>
+      </div>
+      <div class="ps-tags" id="ps-tags"></div>
+      <div class="ps-grid" id="ps-grid"></div>
+    </div>
+
+    <!-- クイック質問 -->
+    <div id="quick-section" style="display:none">
+      <div class="sec-label">よくある質問</div>
+      <div class="qlist" id="qlist"></div>
+    </div>
+    <div class="no-hint" id="no-hint">物件を選ぶと質問ボタンが表示されます</div>
+  </div>
+</div>
+
+<!-- ══ COL B ══ -->
+<div class="col-b">
+  <div class="chat-area" id="chat-area">
+    <div class="msg-ai-row">
+      <div class="av av-a">AI</div>
+      <div class="bubble bubble-sys">左から対象物件を選択してください。選択後、質問ボタンまたは自由入力で回答案を生成します。</div>
+    </div>
+  </div>
+  <div class="input-bar">
+    <button class="mic-q" id="mic-q" onclick="startVoice('q')" title="音声で質問">
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="6.5" y="1" width="7" height="10" rx="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 10c0 3.6 2.9 6.5 6.5 6.5s6.5-2.9 6.5-6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="10" y1="16.5" x2="10" y2="19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <input class="main-input" id="main-input" placeholder="物件を選んでから質問を入力…" disabled/>
+    <button class="send-btn" id="send-btn" onclick="submitQ()" disabled>送信</button>
+  </div>
+</div>
+
+<!-- ══ COL C ══ -->
+<div class="col-c">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('floorplan',this)">📐 図面・物件情報</button>
+    <button class="tab" onclick="switchTab('evidence',this)">🔍 回答の根拠</button>
+  </div>
+  <div class="col-c-body">
+    <!-- 図面タブ -->
+    <div class="tab-panel active" id="tab-floorplan">
+      <div id="fp-content"><div class="no-fp">物件を選ぶと図面と詳細情報が表示されます</div></div>
+    </div>
+    <!-- 根拠タブ -->
+    <div class="tab-panel" id="tab-evidence">
+      <div id="ev-content"><div class="ev-empty">質問を送信すると、AIが参照した情報源がここに表示されます</div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- エスカレタスクページ -->
+<div class="esc-page" id="esc-page">
+  <div class="esc-page-header">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="esc-back-btn" onclick="closeEscPage()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        戻る
+      </button>
+      <div style="width:1px;height:20px;background:rgba(255,255,255,0.2)"></div>
+      <span style="font-size:15px;font-weight:700;color:#fff;">エスカレタスク一覧</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="esc-filter-tabs">
+        <button class="ef-tab active" onclick="filterEsc('all',this)">すべて <span class="ef-count" id="efc-all">0</span></button>
+        <button class="ef-tab" onclick="filterEsc('open',this)">未対応 <span class="ef-count" id="efc-open">0</span></button>
+        <button class="ef-tab" onclick="filterEsc('done',this)">対応済み <span class="ef-count" id="efc-done">0</span></button>
+      </div>
+    </div>
+  </div>
+  <div class="esc-page-body">
+    <div class="esc-empty" id="esc-empty">
+      <div style="font-size:40px;margin-bottom:12px;opacity:.3">📋</div>
+      <div style="font-size:14px;color:var(--tx3)">エスカレタスクはまだありません</div>
+      <div style="font-size:12px;color:var(--tx3);margin-top:4px">回答画面で「担当者へ回す」を押すとここに追加されます</div>
+    </div>
+    <div class="esc-task-list" id="esc-task-list"></div>
+  </div>
+</div>
+
+
+<script>
+/* ── DATA ─────────────────────────────────── */
+const PROPS=[
+  {id:1,type:"single",name:"A・City名港",room:"309号室",layout:"K+洋室 7.2㎡",structure:"RC造",rent:"¥72,000",manage:"¥5,000",deposit:"2ヶ月",key:"¥22,000",disinfect:"¥16,500",parking:"なし",pet:"不可",soho:"可",contract:"普通借家 2年",floor:"3F / 8F",
+   goweb:{pet:"ペット：不可（鳥獣類の飼育・一時預かり含む全て不可）",soho:"SOHO：可（専用登記不可）",cleaning:"ルームクリーニング：退去時38,500円（税込）",deposit:"敷金：1年未満→2ヶ月、2年未満→1ヶ月"},
+   sheet:{g1:"保証会社①：IBJ【月次】個人・法人　初回：賃料50%+月1.5%",g2:"保証会社②：日本セーフティー　初回：賃料50%+口振手数料550円　月額：1,200円",foreign:"外国籍：可（連帯保証人必須・保証会社は日本セーフティーのみ）",negotiate:"条件交渉：内容次第、応諾できない場合あり",insurance:"推奨保険：フレックス少額短期保険 〜2DK 18,000円/2年"},
+   cond:{elderly:"高齢者：相談可",office:"事務所：相談可",spring:"春入居：可",sub:"転貸借：不可"}},
+
+  {id:2,type:"family",name:"プラス・ド・ビ藤崎",room:"201号室",layout:"3LDK 78.5㎡",structure:"RC造",rent:"¥138,000",manage:"¥12,000",deposit:"2ヶ月",key:"¥33,000",disinfect:"¥22,000",parking:"敷地内 ¥15,000/月",pet:"小型犬・猫1匹可",soho:"不可",contract:"普通借家 2年",floor:"5F / 12F",
+   goweb:{pet:"ペット：小型犬・猫1匹まで可（敷金+1ヶ月追加）",soho:"SOHO：不可",cleaning:"ルームクリーニング：退去時62,000円（税込）",deposit:"敷金：2ヶ月（ペット飼育時+1ヶ月）",school:"学区：藤崎小学校区（徒歩8分）／藤崎中学校区（徒歩12分）"},
+   sheet:{g1:"保証会社：IBJ 個人・法人　初回：賃料50%+月1.5%",petcond:"ペット詳細：小型犬10kg以下、猫は室内飼い限定、多頭飼い不可",foreign:"外国籍：要相談（審査次第）",negotiate:"条件交渉：あり（担当者要確認）",school_d:"藤崎小学校区（徒歩8分）・藤崎中学校区（徒歩12分）"},
+   cond:{elderly:"高齢者：不可",office:"事務所：不可",spring:"春入居：可",sub:"転貸借：不可"}},
+
+  {id:3,type:"tower",name:"ザ・タワー名古屋",room:"2102号室",layout:"2LDK 65.2㎡",structure:"RC造（45F建）",rent:"¥215,000",manage:"¥28,000",deposit:"3ヶ月",key:"¥44,000",disinfect:"¥38,500",parking:"タワー駐車場 ¥35,000〜/月",pet:"完全不可",soho:"不可",contract:"普通借家 2年",floor:"21F / 45F",
+   goweb:{pet:"ペット：完全不可",soho:"SOHO：不可（居住用途のみ）",cleaning:"ルームクリーニング：退去時82,000円（税込）",facility:"共用施設：コンシェルジュ・フィットネス・スカイラウンジ・ゲストルーム・キッズルーム",view:"眺望：南西向き、名古屋港・名城公園ビュー"},
+   sheet:{g1:"保証会社：クレデンス（タワマン専用）　初回：賃料50%",manage_d:"管理費内訳：共用施設維持費・24h管理人・EV保守・セキュリティ",foreign:"外国籍：法人契約のみ可（個人不可）",negotiate:"家賃交渉：不可（オーナー規定）",view_d:"21F以上・南西向き・港ビュー"},
+   cond:{elderly:"高齢者：不可",office:"居住のみ",spring:"春入居：可",sub:"転貸借：不可"}},
+
+  {id:4,type:"parking",name:"名港パーキング第2",room:"A-23区画",layout:"普通車区画 2.5m×5m",structure:"自走式",rent:"¥15,000",manage:"¥0",deposit:"1ヶ月",key:"なし",disinfect:"なし",parking:"自走式（24h）",pet:"対象外",soho:"対象外",contract:"月極契約",floor:"1F",
+   goweb:{size:"区画サイズ：幅2.5m×奥行5m（普通車対応）",hours:"入出庫：24時間利用可",restrict:"車種制限：全高1.55m以下、全幅1.85m以下"},
+   sheet:{cartype:"対応車種：軽〜コンパクト・普通車。SUV・ミニバン：要寸法確認（全高1.55m以下）",notice:"解約予告：1ヶ月前（月末日解約）",foreign:"外国籍：可（在留カード提示必要）",negotiate:"月額交渉：不可（定額制）",vacant:"現在空き：A-23・A-24区画"},
+   cond:{office:"月極のみ",spring:"即入庫：可",sub:"転貸借：不可"}}
+];
+
+/* 物件タイプ別クイック質問 */
+const QTPL={
+  single:[
+    {l:"ペットは飼えますか？",i:"🐾",k:"pet"},
+    {l:"保証会社を教えてください",i:"🏢",k:"guarantee"},
+    {l:"外国籍の方は入居できますか？",i:"🌏",k:"foreign"},
+    {l:"SOHO・事務所利用は可能ですか？",i:"💼",k:"soho"},
+    {l:"初期費用の内訳を教えてください",i:"💰",k:"initial"},
+    {l:"家賃交渉はできますか？",i:"💬",k:"negotiate"}
+  ],
+  family:[
+    {l:"ペット飼育の条件を教えてください",i:"🐾",k:"pet"},
+    {l:"学区はどこですか？",i:"🏫",k:"school"},
+    {l:"駐車場はありますか？",i:"🚗",k:"parking"},
+    {l:"広さと間取りについて教えてください",i:"📐",k:"layout"},
+    {l:"保証会社を教えてください",i:"🏢",k:"guarantee"},
+    {l:"外国籍の方は入居できますか？",i:"🌏",k:"foreign"},
+    {l:"家賃交渉はできますか？",i:"💬",k:"negotiate"}
+  ],
+  tower:[
+    {l:"共用施設を教えてください",i:"🏊",k:"facility"},
+    {l:"管理費の内訳を教えてください",i:"💰",k:"manage"},
+    {l:"眺望・方角を教えてください",i:"🌆",k:"view"},
+    {l:"タワー駐車場の料金は？",i:"🚗",k:"parking"},
+    {l:"外国籍の方は入居できますか？",i:"🌏",k:"foreign"},
+    {l:"ペットは飼えますか？",i:"🐾",k:"pet"},
+    {l:"家賃交渉はできますか？",i:"💬",k:"negotiate"}
+  ],
+  parking:[
+    {l:"駐車できる車種を教えてください",i:"🚗",k:"cartype"},
+    {l:"入出庫の時間制限はありますか？",i:"🕐",k:"hours"},
+    {l:"空き区画はありますか？",i:"📋",k:"vacant"},
+    {l:"車のサイズ制限を教えてください",i:"📏",k:"restrict"},
+    {l:"解約の手続きを教えてください",i:"📝",k:"notice"},
+    {l:"外国籍の方は契約できますか？",i:"🌏",k:"foreign"}
+  ]
+};
+
+/* 回答生成 */
+function getAnswer(p,key){
+  const g=p.goweb,s=p.sheet;
+  const map={
+    pet:()=>{
+      const ok=p.pet!=="不可"&&p.pet!=="完全不可";
+      return{text:ok?`${p.name}はペット飼育が可能です。${s.petcond||"詳細は条件シートをご確認ください。"}`:`${p.name}はペット不可物件です。${p.pet}となります。`,
+        conf:93,esc:false,ev:[{src:"goweb",f:"ペット条件",t:g.pet,m:ok?"可":"不可"},ok&&s.petcond?{src:"sheet",f:"ペット詳細",t:s.petcond,m:"kg"}:null].filter(Boolean)};
+    },
+    guarantee:()=>({text:`保証会社：${s.g1}。${s.g2||""}`,conf:91,esc:false,ev:[{src:"sheet",f:"保証会社①",t:s.g1,m:"初回"},{src:"sheet",f:"保証会社②",t:s.g2||"",m:"月額"}].filter(e=>e.t)}),
+    foreign:()=>{const esc=(s.foreign||"").includes("不可")||(s.foreign||"").includes("法人");return{text:`外国籍入居：${s.foreign||"詳細要確認"}`,conf:esc?60:84,esc,ev:[{src:"sheet",f:"外国籍条件",t:s.foreign||"確認が必要です",m:"外国"}]};},
+    soho:()=>({text:`SOHO・事務所利用：${g.soho}`,conf:93,esc:false,ev:[{src:"goweb",f:"SOHO条件",t:g.soho,m:p.soho==="可"?"可":"不可"}]}),
+    initial:()=>({text:`初期費用目安：敷金${p.deposit}、鍵交換${p.key}、消毒料${p.disinfect}、保証会社初回保証料（賃料の約50%）、保険料（${s.insurance||"別途"})。`,conf:84,esc:false,ev:[{src:"goweb",f:"敷金",t:g.deposit,m:"ヶ月"},{src:"sheet",f:"保険",t:s.insurance||"要確認",m:"円"}]}),
+    negotiate:()=>{const esc=(s.negotiate||"").includes("不可")||(s.negotiate||"").includes("次第");return{text:`条件交渉：${s.negotiate||"担当者要確認"}`,conf:esc?52:72,esc,ev:[{src:"sheet",f:"条件交渉",t:s.negotiate||"要確認",m:"交渉"}]};},
+    school:()=>({text:`学区：${s.school_d||g.school||"要確認"}`,conf:90,esc:false,ev:[{src:"goweb",f:"学区情報",t:g.school||"",m:"小学校"},{src:"sheet",f:"学区詳細",t:s.school_d||"",m:"徒歩"}].filter(e=>e.t)}),
+    parking:()=>({text:`駐車場：${p.parking}`,conf:91,esc:false,ev:[{src:"goweb",f:"駐車場",t:`駐車場：${p.parking}`,m:"駐車"}]}),
+    layout:()=>({text:`間取り：${p.layout}（${p.floor}）`,conf:95,esc:false,ev:[{src:"goweb",f:"間取り・広さ",t:`${p.layout} / ${p.floor}`,m:"㎡"}]}),
+    facility:()=>({text:`共用施設：${g.facility||"なし"}`,conf:89,esc:false,ev:[{src:"goweb",f:"共用施設",t:g.facility||"詳細確認",m:"コンシェルジュ"}]}),
+    manage:()=>({text:`管理費 ${p.manage}。${s.manage_d||""}`,conf:91,esc:false,ev:[{src:"sheet",f:"管理費内訳",t:s.manage_d||`管理費：${p.manage}`,m:"管理"}]}),
+    view:()=>({text:`眺望：${g.view||"詳細確認"}。${s.view_d||""}`,conf:88,esc:false,ev:[{src:"goweb",f:"眺望・方角",t:g.view||"",m:"向き"},{src:"sheet",f:"眺望詳細",t:s.view_d||"",m:"F"}].filter(e=>e.t)}),
+    cartype:()=>({text:`対応車種：${s.cartype||g.restrict||"要確認"}`,conf:93,esc:false,ev:[{src:"goweb",f:"車種制限",t:g.restrict||"",m:"全高"},{src:"sheet",f:"対応車種詳細",t:s.cartype||"",m:"m"}].filter(e=>e.t)}),
+    restrict:()=>({text:`サイズ制限：${g.restrict||"詳細確認"}`,conf:95,esc:false,ev:[{src:"goweb",f:"サイズ制限",t:g.restrict||"",m:"m以下"}]}),
+    hours:()=>({text:`入出庫：${g.hours||"要確認"}`,conf:96,esc:false,ev:[{src:"goweb",f:"入出庫時間",t:g.hours||"",m:"24時間"}]}),
+    vacant:()=>({text:`空き区画：${s.vacant||"リアルタイム確認が必要なため担当者へお問い合わせください。"}`,conf:65,esc:true,ev:[{src:"sheet",f:"空き状況（最終更新日確認要）",t:s.vacant||"確認が必要です",m:"空き"}]}),
+    notice:()=>({text:`解約手続き：${s.notice||"要確認"}`,conf:92,esc:false,ev:[{src:"sheet",f:"解約予告",t:s.notice||"",m:"ヶ月前"}]})
+  };
+  const fn=map[key];
+  return fn?fn():{text:"この質問のナレッジが見つかりませんでした。担当者へのエスカレーションをお願いします。",conf:18,esc:true,ev:[]};
+}
+
+/* 図面SVG */
+function buildFP(p){
+  if(p.type==="parking") return `
+    <svg width="240" height="160" viewBox="0 0 240 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="232" height="152" rx="4" stroke="#ccc" stroke-width="1" fill="#fafaf8"/>
+      <rect x="20" y="20" width="200" height="120" rx="3" stroke="#4ECDC4" stroke-width="2" fill="#f0fdfb" stroke-dasharray="10,5"/>
+      <text x="120" y="88" text-anchor="middle" font-size="13" fill="#329e96" font-weight="700" font-family="Noto Sans JP">A-23区画</text>
+      <text x="120" y="106" text-anchor="middle" font-size="11" fill="#999" font-family="Noto Sans JP">幅2.5m × 奥行5m</text>
+      <text x="28" y="155" font-size="9" fill="#bbb" font-family="Noto Sans JP">← 入庫方向</text>
+    </svg>`;
+  if(p.type==="tower") return `
+    <svg width="240" height="200" viewBox="0 0 240 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="232" height="192" rx="3" stroke="#ddd" stroke-width="1" fill="#fafaf8"/>
+      <rect x="15" y="15" width="100" height="80" rx="2" stroke="#666" stroke-width="1.2" fill="#fff"/>
+      <text x="65" y="59" text-anchor="middle" font-size="11" fill="#555" font-family="Noto Sans JP">洋室1</text>
+      <rect x="125" y="15" width="100" height="80" rx="2" stroke="#666" stroke-width="1.2" fill="#fff"/>
+      <text x="175" y="59" text-anchor="middle" font-size="11" fill="#555" font-family="Noto Sans JP">洋室2</text>
+      <rect x="15" y="105" width="140" height="60" rx="2" stroke="#666" stroke-width="1.2" fill="#fff"/>
+      <text x="85" y="139" text-anchor="middle" font-size="11" fill="#555" font-family="Noto Sans JP">LDK 22.5㎡</text>
+      <rect x="165" y="105" width="60" height="60" rx="2" stroke="#4ECDC4" stroke-width="1.5" fill="#f0fdfb"/>
+      <text x="195" y="132" text-anchor="middle" font-size="9" fill="#329e96" font-family="Noto Sans JP">バルコニー</text>
+      <text x="195" y="148" text-anchor="middle" font-size="9" fill="#329e96" font-family="Noto Sans JP">南西向き</text>
+      <rect x="15" y="170" width="210" height="22" rx="2" stroke="#ddd" stroke-width="1" fill="#f5f4f0"/>
+      <text x="120" y="185" text-anchor="middle" font-size="9" fill="#aaa" font-family="Noto Sans JP">廊下・玄関・水回り</text>
+    </svg>`;
+  if(p.type==="family") return `
+    <svg width="240" height="220" viewBox="0 0 240 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="232" height="212" rx="3" stroke="#ddd" stroke-width="1" fill="#fafaf8"/>
+      <rect x="15" y="15" width="90" height="90" rx="2" stroke="#666" stroke-width="1.2" fill="#fff"/>
+      <text x="60" y="64" text-anchor="middle" font-size="11" fill="#555" font-family="Noto Sans JP">洋室1</text>
+      <rect x="115" y="15" width="110" height="90" rx="2" stroke="#666" stroke-width="1.2" fill="#fff"/>
+      <text x="170" y="64" text-anchor="middle" font-size="11" fill="#555" font-family="Noto Sans JP">洋室2</text>
+      <rect x="15" y="115" width="170" height="70" rx="2" stroke="#666" stroke-width="1.2" fill="#fff"/>
+      <text x="100" y="154" text-anchor="middle" font-size="11" fill="#555" font-family="Noto Sans JP">LDK 20.5㎡</text>
+      <rect x="195" y="115" width="30" height="70" rx="2" stroke="#4ECDC4" stroke-width="1.5" fill="#f0fdfb"/>
+      <text x="210" y="153" text-anchor="middle" font-size="8" fill="#329e96" font-family="Noto Sans JP">洋室3</text>
+      <rect x="15" y="192" width="210" height="20" rx="2" stroke="#ddd" stroke-width="1" fill="#f5f4f0"/>
+      <text x="120" y="205" text-anchor="middle" font-size="9" fill="#aaa" font-family="Noto Sans JP">廊下・水回り</text>
+    </svg>`;
+  return `
+    <svg width="240" height="190" viewBox="0 0 240 190" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="232" height="182" rx="3" stroke="#ddd" stroke-width="1" fill="#fafaf8"/>
+      <rect x="15" y="15" width="130" height="100" rx="2" stroke="#666" stroke-width="1.2" fill="#fff"/>
+      <text x="80" y="69" text-anchor="middle" font-size="11" fill="#555" font-family="Noto Sans JP">洋室 7.2㎡</text>
+      <rect x="155" y="15" width="75" height="50" rx="2" stroke="#666" stroke-width="1.2" fill="#fff"/>
+      <text x="192" y="43" text-anchor="middle" font-size="10" fill="#555" font-family="Noto Sans JP">K</text>
+      <rect x="155" y="75" width="75" height="40" rx="2" stroke="#4ECDC4" stroke-width="1.5" fill="#f0fdfb"/>
+      <text x="192" y="98" text-anchor="middle" font-size="9" fill="#329e96" font-family="Noto Sans JP">バルコニー</text>
+      <rect x="15" y="125" width="50" height="50" rx="2" stroke="#666" stroke-width="1.2" fill="#fff"/>
+      <text x="40" y="154" text-anchor="middle" font-size="9" fill="#555" font-family="Noto Sans JP">浴室</text>
+      <rect x="75" y="125" width="65" height="50" rx="2" stroke="#666" stroke-width="1.2" fill="#fff"/>
+      <text x="107" y="154" text-anchor="middle" font-size="9" fill="#555" font-family="Noto Sans JP">洗面・WC</text>
+      <rect x="15" y="168" width="215" height="10" rx="2" stroke="#ddd" stroke-width="1" fill="#f5f4f0"/>
+    </svg>`;
+}
+
+function buildFPContent(p){
+  const typeLabel={single:"単身用",family:"ファミリー",tower:"タワマン",parking:"駐車場"};
+  return `
+    <div class="fp-wrap">
+      <div class="fp-name">${p.name} ${p.room}</div>
+      <div class="fp-sub">${p.layout} / ${typeLabel[p.type]} / ${p.floor}</div>
+      <div class="fp-svg-center">${buildFP(p)}</div>
+      <div class="fp-grid">
+        <div class="fp-cell"><div class="fp-ck">賃料</div><div class="fp-cv">${p.rent}</div></div>
+        <div class="fp-cell"><div class="fp-ck">管理費</div><div class="fp-cv">${p.manage||"なし"}</div></div>
+        <div class="fp-cell"><div class="fp-ck">敷金</div><div class="fp-cv">${p.deposit}</div></div>
+        <div class="fp-cell"><div class="fp-ck">構造</div><div class="fp-cv">${p.structure}</div></div>
+        <div class="fp-cell"><div class="fp-ck">契約</div><div class="fp-cv">${p.contract}</div></div>
+        <div class="fp-cell"><div class="fp-ck">駐車場</div><div class="fp-cv">${p.parking}</div></div>
+      </div>
+      <div class="fp-actions">
+        <button class="fp-btn fp-btn-pri" onclick="alert('本番では GoWeb の物件詳細ページをここに表示します')">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 2h5v2H4v8h8v-3h2v5H2V2z" fill="currentColor"/><path d="M9 2h5v5h-2V5.4l-5.3 5.3-1.4-1.4L10.6 4H9V2z" fill="currentColor"/></svg>
+          GoWebで開く
+        </button>
+        <button class="fp-btn fp-btn-sec" onclick="alert('本番では PDF 図面をダウンロードできます')">
+          📄 図面PDF
+        </button>
+      </div>
+    </div>`;
+}
+
+/* ── UI helpers ─────────────────────────────── */
+let currentProp=null,recog=null;
+
+function filterProps(val){
+  const list=val?PROPS.filter(p=>p.name.includes(val)||p.room.includes(val)):PROPS;
+  renderDrop(list);
+}
+function openDrop(){renderDrop(PROPS);}
+function renderDrop(list){
+  const d=document.getElementById('prop-drop');
+  if(!list.length){d.classList.remove('open');return;}
+  const tc={single:"tp-s",family:"tp-f",tower:"tp-t",parking:"tp-p"};
+  const tl={single:"単身",family:"ファミリー",tower:"タワマン",parking:"駐車場"};
+  d.innerHTML=list.map(p=>`
+    <div class="d-item${currentProp&&currentProp.id===p.id?' sel':''}" onclick="selectProp(${p.id})">
+      <span class="type-pill ${tc[p.type]}">${tl[p.type]}</span>
+      <span>${p.name} <span style="color:#aaa;font-size:11px">${p.room}</span></span>
+      <span class="d-right">${p.layout} / ${p.rent}</span>
+    </div>`).join('');
+  d.classList.add('open');
+}
+
+function selectProp(id){
+  currentProp=PROPS.find(p=>p.id===id);
+  document.getElementById('prop-input').value=currentProp.name+' '+currentProp.room;
+  document.getElementById('prop-drop').classList.remove('open');
+
+  // サマリーカード
+  document.getElementById('ps-name').textContent=currentProp.name;
+  document.getElementById('ps-room').textContent=currentProp.room+' / '+currentProp.layout;
+  const tags=[];
+  if(currentProp.type!=='parking'){
+    tags.push(currentProp.pet!=='不可'&&currentProp.pet!=='完全不可'&&currentProp.pet!=='対象外'?['tag-ok','ペット可']:['tag-ng','ペット不可']);
+    if(currentProp.soho==='可')tags.push(['tag-info','SOHO可']);
+  }
+  if(currentProp.parking!=='なし'&&currentProp.parking!=='対象外')tags.push(['tag-info','駐車場あり']);
+  document.getElementById('ps-tags').innerHTML=tags.map(([c,t])=>`<span class="ps-tag ${c}">${t}</span>`).join('');
+  document.getElementById('ps-grid').innerHTML=[
+    ['賃料',currentProp.rent],['管理費',currentProp.manage||'なし'],
+    ['敷金',currentProp.deposit],['階数',currentProp.floor]
+  ].map(([k,v])=>`<div class="ps-cell"><div class="ps-k">${k}</div><div class="ps-v">${v}</div></div>`).join('');
+  document.getElementById('prop-summary').classList.add('visible');
+
+  // クイック質問（タイプ別）
+  const tmpl=QTPL[currentProp.type]||QTPL.single;
+  document.getElementById('qlist').innerHTML=tmpl.map(q=>`<button class="qbtn" onclick="askQ('${q.l}','${q.k}')"><span class="qbtn-icon">${q.i}</span>${q.l}</button>`).join('');
+  document.getElementById('quick-section').style.display='block';
+  document.getElementById('no-hint').style.display='none';
+
+  // 入力解放
+  const mi=document.getElementById('main-input');
+  mi.disabled=false; mi.placeholder=`${currentProp.name}への質問を入力…`;
+  document.getElementById('send-btn').disabled=false;
+
+  // 図面を右パネルに即表示
+  document.getElementById('fp-content').innerHTML=buildFPContent(currentProp);
+  switchTabByName('floorplan');
+
+  // ステップ更新
+  setStep(2);
+  addMsg('sys',`${currentProp.name} ${currentProp.room}を選択しました。下のボタンまたはテキストで質問してください。`);
+}
+
+function clearProp(){
+  currentProp=null;
+  document.getElementById('prop-input').value='';
+  document.getElementById('prop-summary').classList.remove('visible');
+  document.getElementById('quick-section').style.display='none';
+  document.getElementById('no-hint').style.display='block';
+  document.getElementById('main-input').disabled=true;
+  document.getElementById('send-btn').disabled=true;
+  document.getElementById('fp-content').innerHTML='<div class="no-fp">物件を選ぶと図面と詳細情報が表示されます</div>';
+  document.getElementById('ev-content').innerHTML='<div class="ev-empty">質問を送信すると、AIが参照した情報源がここに表示されます</div>';
+  setStep(1);
+}
+
+/* ── チャット ── */
+function addMsg(type,text){
+  const area=document.getElementById('chat-area');
+  const el=document.createElement('div');
+  if(type==='user'){
+    el.className='msg-user-row';
+    el.innerHTML=`<div class="av av-u">仲</div><div class="bubble bubble-u">${text}</div>`;
+  } else {
+    el.className='msg-ai-row';
+    el.innerHTML=`<div class="av av-a">AI</div><div class="bubble bubble-sys">${text}</div>`;
+  }
+  area.appendChild(el); area.scrollTop=area.scrollHeight;
+}
+
+function showAnswer(result){
+  const t=document.getElementById('typing-el');
+  if(t)t.remove();
+  const area=document.getElementById('chat-area');
+  const cc=result.conf>=80?'cc-hi':result.conf>=60?'cc-mi':'cc-lo';
+  const escHTML=result.esc?`<div class="esc-box"><span>⚠</span><span>担当者への確認・エスカレーションを推奨します。</span></div>`:'';
+  const card=document.createElement('div');
+  card.className='msg-ai-row';
+  card.innerHTML=`<div class="av av-a">AI</div>
+    <div class="answer-card">
+      <div class="ac-head">
+        <div class="ac-hl"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#4ECDC4" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#4ECDC4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>AI 回答案</div>
+        <span class="conf-chip ${cc}">信頼度 ${result.conf}%</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-ans">${result.text}</div>
+        ${escHTML}
+        <div class="ac-actions">
+          <button class="btn-use" onclick="this.textContent='✓ 回答済み';this.disabled=true;this.style.background='#329e96'">✓ この回答を使う</button>
+          <button class="btn-esc" onclick="addEscalation(this)">担当者へ回す</button>
+        </div>
+      </div>
+    </div>`;
+  area.appendChild(card); area.scrollTop=area.scrollHeight;
+
+  // 根拠パネル更新
+  updateEvidence(result.ev);
+  switchTabByName('evidence');
+  setStep(3);
+}
+
+function updateEvidence(evList){
+  const srcMap={goweb:['sb-gw','GoWeb 物件詳細'],sheet:['sb-sh','募集条件シート'],know:['sb-kn','回答ナレッジ']};
+  if(!evList||!evList.length){
+    document.getElementById('ev-content').innerHTML='<div class="ev-empty">参照できる情報がありませんでした</div>';return;
+  }
+  document.getElementById('ev-content').innerHTML=evList.map(ev=>{
+    const [cls,lbl]=srcMap[ev.src]||['sb-kn','ナレッジ'];
+    const marked=ev.t?ev.t.replace(new RegExp(ev.m.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),`<mark>${ev.m}</mark>`):'';
+    return `<div class="ev-item"><div class="ev-head"><span class="src-badge ${cls}">${lbl}</span><span class="ev-field">${ev.f}</span></div><div class="ev-body">${marked}</div></div>`;
+  }).join('');
+}
+
+function askQ(label,key){
+  if(!currentProp)return;
+  addMsg('user',label);
+  const area=document.getElementById('chat-area');
+  const tr=document.createElement('div');
+  tr.className='typing-row';tr.id='typing-el';
+  tr.innerHTML='<div class="av av-a">AI</div><div class="typing-bub"><div class="td"></div><div class="td"></div><div class="td"></div></div>';
+  area.appendChild(tr); area.scrollTop=area.scrollHeight;
+  document.getElementById('send-btn').disabled=true;
+  setTimeout(()=>{showAnswer(getAnswer(currentProp,key));document.getElementById('send-btn').disabled=false;},1000);
+}
+
+function submitQ(){
+  const inp=document.getElementById('main-input');
+  const q=inp.value.trim();
+  if(!q||!currentProp)return;
+  inp.value='';
+  const km={pet:["ペット","犬","猫","動物"],guarantee:["保証会社","保証料","保証人"],foreign:["外国籍","外国人","がいこく"],soho:["SOHO","事務所","登記"],initial:["初期費用","敷金","礼金","鍵","消毒"],negotiate:["家賃","交渉","値引"],school:["学区","小学校","学校"],parking:["駐車場","車"],facility:["共用","コンシェルジュ","ジム","フィットネス"],manage:["管理費"],view:["眺望","景色","方角","ビュー"],cartype:["車種","車のサイズ"],restrict:["サイズ","制限","大きさ"],hours:["時間","入出庫"],vacant:["空き","空いて","空室"],notice:["解約","退去","手続き"]};
+  let matched=null;
+  for(const[k,ws]of Object.entries(km))if(ws.some(w=>q.includes(w))){matched=k;break;}
+  askQ(q,matched||'_unknown');
+}
+
+/* ── タブ ── */
+function switchTab(name,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+function switchTabByName(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const isTarget=(name==='floorplan'&&i===0)||(name==='evidence'&&i===1);
+    t.classList.toggle('active',isTarget);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+/* ── ステップ表示 ── */
+function setStep(n){
+  for(let i=1;i<=3;i++){
+    document.getElementById(`step${i}-dot`).classList.toggle('active',i<=n);
+    document.getElementById(`step${i}-lbl`).style.color=i<=n?'rgba(255,255,255,.85)':'rgba(255,255,255,.35)';
+  }
+}
+
+/* ── 音声入力 ── */
+function startVoice(mode){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const btnId=mode==='prop'?'mic-prop':'mic-q';
+  const inputId=mode==='prop'?'prop-input':'main-input';
+  const btn=document.getElementById(btnId);
+  if(!SR){simulateVoice(mode,inputId,btn);return;}
+  if(recog){recog.stop();recog=null;btn.classList.remove('listening');return;}
+  recog=new SR();recog.lang='ja-JP';recog.interimResults=true;
+  btn.classList.add('listening');
+  if(mode==='prop')document.getElementById('vhint-prop').textContent='🎤 聞いています…';
+  recog.onresult=e=>{
+    const t=Array.from(e.results).map(r=>r[0].transcript).join('');
+    document.getElementById(inputId).value=t;
+    if(e.results[0].isFinal&&mode==='prop')filterProps(t);
+  };
+  recog.onend=()=>{btn.classList.remove('listening');recog=null;if(mode==='prop')document.getElementById('vhint-prop').textContent='';};
+  recog.onerror=()=>{btn.classList.remove('listening');recog=null;};
+  recog.start();
+}
+function simulateVoice(mode,inputId,btn){
+  btn.classList.add('listening');
+  if(mode==='prop')document.getElementById('vhint-prop').textContent='🎤 デモ：音声入力シミュレーション中…';
+  const demo=mode==='prop'?'A・City名港':'ペットは飼えますか？';
+  let i=0;
+  const iv=setInterval(()=>{
+    document.getElementById(inputId).value=demo.substring(0,++i);
+    if(i>=demo.length){
+      clearInterval(iv);btn.classList.remove('listening');
+      if(mode==='prop'){document.getElementById('vhint-prop').textContent='✓ デモ完了（Chrome ではマイクが使えます）';filterProps(demo);}
+    }
+  },75);
+}
+
+/* ── エスカレタスク管理 ─────────────────────── */
+let escTasks=[];
+let escFilter='all';
+
+function addEscalation(btn){
+  if(!currentProp)return;
+  // ボタンの親カードから回答テキストを取得
+  const card=btn.closest('.answer-card');
+  const qText=card.querySelector('.ac-ans').textContent;
+  const confText=card.querySelector('.conf-chip').textContent;
+  const conf=parseInt(confText)||0;
+
+  const task={
+    id:Date.now(),
+    prop:currentProp.name,
+    room:currentProp.room,
+    type:currentProp.type,
+    question:document.querySelector('.msg-user-row:last-of-type .bubble-u')?.textContent||'（質問内容）',
+    answer:qText,
+    conf:conf,
+    time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+    date:new Date().toLocaleDateString('ja-JP',{month:'2-digit',day:'2-digit'}),
+    done:false,
+    memo:''
+  };
+  escTasks.push(task);
+
+  // ボタンを押せなくする
+  btn.textContent='✓ エスカレ済み';
+  btn.disabled=true;
+  btn.style.borderColor='var(--amber)';
+  btn.style.color='var(--amber)';
+
+  // バッジ更新
+  updateEscBadge();
+  renderEscTasks();
+}
+
+function updateEscBadge(){
+  const open=escTasks.filter(t=>!t.done).length;
+  const badge=document.getElementById('esc-count-badge');
+  badge.style.display=open>0?'flex':'none';
+  badge.textContent=open;
+}
+
+function renderEscTasks(){
+  const list=escTasks.filter(t=>{
+    if(escFilter==='open')return !t.done;
+    if(escFilter==='done')return t.done;
+    return true;
+  });
+  document.getElementById('esc-empty').style.display=escTasks.length===0?'block':'none';
+  const typeLabel={single:'単身',family:'ファミリー',tower:'タワマン',parking:'駐車場'};
+  const typeClass={single:'tp-s',family:'tp-f',tower:'tp-t',parking:'tp-p'};
+  document.getElementById('esc-task-list').innerHTML=list.map(t=>{
+    const cc=t.conf>=80?'cc-hi':t.conf>=60?'cc-mi':'cc-lo';
+    return `
+    <div class="esc-task${t.done?' done':''}" id="task-${t.id}">
+      <div class="esc-task-head">
+        <button class="esc-status-btn${t.done?' done':''}" onclick="toggleTaskDone(${t.id})" title="${t.done?'未対応に戻す':'対応済みにする'}">
+          ${t.done?`<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`:''}
+        </button>
+        <span class="type-pill ${typeClass[t.type]}">${typeLabel[t.type]}</span>
+        <span class="esc-task-prop">${t.prop}</span>
+        <span class="esc-task-room">${t.room}</span>
+        <span class="esc-done-label">✓ 対応済み</span>
+        <span class="esc-task-time">${t.date} ${t.time}</span>
+      </div>
+      <div class="esc-task-body">
+        <div class="esc-task-q">「${t.question}」</div>
+        <div class="esc-task-ans">${t.answer}</div>
+        <div class="esc-task-meta">
+          <span class="conf-chip ${cc}" style="font-size:10px">AI信頼度 ${t.conf}%</span>
+          <span class="esc-done-mark">✓ 対応済み</span>
+          ${t.memo?`<span style="font-size:11px;color:var(--tx3)">📝 ${t.memo}</span>`:''}
+          <div class="esc-task-actions">
+            <button class="esc-act" onclick="toggleMemo(${t.id})">📝 メモ</button>
+            ${t.done
+              ?`<button class="esc-act" onclick="toggleTaskDone(${t.id})">↩ 未対応に戻す</button>`
+              :`<button class="esc-act" onclick="toggleTaskDone(${t.id})" style="border-color:var(--teal);color:var(--teal-d)">✓ 対応済みにする</button>`
+            }
+            <button class="esc-act danger" onclick="deleteTask(${t.id})">削除</button>
+          </div>
+        </div>
+        <div class="esc-memo-area${t._memoOpen?' open':''}" id="memo-${t.id}">
+          <textarea class="esc-memo" placeholder="担当者へのメモを入力…" onchange="saveMemo(${t.id},this.value)">${t.memo}</textarea>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // カウント更新
+  document.getElementById('efc-all').textContent=escTasks.length;
+  document.getElementById('efc-open').textContent=escTasks.filter(t=>!t.done).length;
+  document.getElementById('efc-done').textContent=escTasks.filter(t=>t.done).length;
+}
+
+function toggleTaskDone(id){
+  const t=escTasks.find(t=>t.id===id);
+  if(!t)return;
+  t.done=!t.done;
+  updateEscBadge();
+  renderEscTasks();
+}
+function toggleMemo(id){
+  const t=escTasks.find(t=>t.id===id);
+  if(!t)return;
+  t._memoOpen=!t._memoOpen;
+  renderEscTasks();
+  if(t._memoOpen)setTimeout(()=>document.querySelector(`#memo-${id} textarea`)?.focus(),50);
+}
+function saveMemo(id,val){
+  const t=escTasks.find(t=>t.id===id);
+  if(t)t.memo=val;
+}
+function deleteTask(id){
+  escTasks=escTasks.filter(t=>t.id!==id);
+  updateEscBadge();
+  renderEscTasks();
+}
+function filterEsc(f,btn){
+  escFilter=f;
+  document.querySelectorAll('.ef-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderEscTasks();
+}
+function openEscPage(){
+  renderEscTasks();
+  document.getElementById('esc-page').classList.add('open');
+}
+function closeEscPage(){
+  document.getElementById('esc-page').classList.remove('open');
+}
+
+
+document.getElementById('main-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitQ();});
+document.addEventListener('click',e=>{if(!e.target.closest('.col-a'))document.getElementById('prop-drop').classList.remove('open');});
+</script>
+</body>
+</html>
